@@ -26,6 +26,21 @@ Read our [documentation](https://docs.launchdarkly.com) for in-depth instruction
 
 This SDK builds upon the [JavaScript SDK](https://github.com/launchdarkly/js-client-sdk), supporting all of the same functionality, but using React's Context API to provide additional conveniences. While using this SDK you may need to directly interact with the underlying JavaScript SDK. For more information on how to use the JavaScript SDK and its characteristics, see the [SDK's README](https://github.com/launchdarkly/js-client-sdk/blob/main/README.md).
 
+## Examples
+
+The SDK includes several examples to demonstrate various features and use cases:
+
+### Flag-Based Logger
+
+The [flag-based logger example](./examples/flag-based-logger) demonstrates how to use a feature flag to control the SDK's log level at runtime. This allows you to dynamically change logging behavior without code changes or redeployment, which can be particularly useful for troubleshooting issues in production environments.
+
+Key features:
+- Dynamically change logging behavior using a feature flag
+- Target different log levels to different environments or users
+- Temporarily increase logging detail for troubleshooting without affecting all users
+
+See the [example README](./examples/flag-based-logger/README.md) for more details on how to set up and use the flag-based logger.
+
 ## Testing
 
 We run integration tests for all our SDKs using a centralized test harness. This approach gives us the ability to test for consistency across SDKs, as well as test networking behavior in a long-running application. These tests cover each method in the SDK, and verify that event sending, flag evaluation, stream reconnection, and other aspects of the SDK all behave correctly.
