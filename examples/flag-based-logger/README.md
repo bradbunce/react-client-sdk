@@ -60,8 +60,8 @@ This example demonstrates how to use a feature flag to control the LaunchDarkly 
 ## Setting Up the Feature Flag
 
 1. In your LaunchDarkly dashboard, create a new feature flag:
-   - **Name**: SDK Log Level
-   - **Key**: `sdk-log-level` (or `sdkLogLevel` if using camelCase)
+   - **Name**: Custom Log Level (or any name you prefer)
+   - **Key**: This example uses `custom-log-level` to demonstrate the configurability, but you can use any flag key you want
    - **Variation Type**: String
    - **Variations**:
      - `debug` - Show all messages (debug, info, warn, error)
@@ -71,6 +71,8 @@ This example demonstrates how to use a feature flag to control the LaunchDarkly 
 
 2. Set up targeting rules as needed for different environments or users
 
+> **Note**: The default flag key is `sdk-log-level` if you don't specify a custom key, but this example intentionally uses a custom key to demonstrate how to configure it.
+
 ## Using the Flag-Based Logger
 
 To use the flag-based logger in your application:
@@ -78,7 +80,14 @@ To use the flag-based logger in your application:
 1. Copy the `dynamicLogger.ts` file to your project
 2. Create a logger instance:
    ```typescript
+   // You can use the string format (for backward compatibility)
    const logger = createFlagBasedLogger('sdk-log-level');
+   
+   // Or use the options object for more clarity and future extensibility
+   const loggerOptions = {
+     logLevelFlagKey: 'custom-log-level' // Use any flag key you want
+   };
+   const logger = createFlagBasedLogger(loggerOptions);
    ```
 3. Initialize the LaunchDarkly SDK with this logger:
    ```typescript
@@ -108,8 +117,11 @@ To use the flag-based logger in your application:
          
          // Set up a listener for flag changes to handle log level changes
          const handleFlagChange = (changes) => {
-           // If the sdk-log-level flag changes, re-identify with the current context
-           const logLevelChange = changes['sdk-log-level'] || changes['sdkLogLevel'];
+           // Get the flag key used by the logger (same as what you configured when creating the logger)
+           const flagKey = 'custom-log-level'; // Use the same key you configured for the logger
+           
+           // If the log level flag changes, re-identify with the current context
+           const logLevelChange = changes[flagKey];
            
            if (logLevelChange) {
              // Get the new log level

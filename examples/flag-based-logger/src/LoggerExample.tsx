@@ -3,25 +3,31 @@ import { LDProvider, useLDClient, useFlags } from 'launchdarkly-react-client-sdk
 import { createFlagBasedLogger } from '../../../src/dynamicLogger';
 import { LDContext } from 'launchdarkly-js-client-sdk';
 
-// Create the logger instance
-const logger = createFlagBasedLogger('sdk-log-level'); // or 'sdkLogLevel' if using camelCase
+// The logger is now created dynamically based on user input
+// See the LoggerExample component below
 
 /**
  * Component to update the logger with the client reference after initialization
  * and handle flag changes
  */
-const LoggerUpdater: React.FC = () => {
+const LoggerUpdater: React.FC<{
+  logger: ReturnType<typeof createFlagBasedLogger>;
+  logLevelFlagKey: string;
+}> = ({ logger, logLevelFlagKey }) => {
   const ldClient = useLDClient();
   
   useEffect(() => {
     if (ldClient) {
       logger.setClient(ldClient);
       
+      // Get the flag key from the props
+      const flagKey = logLevelFlagKey;
+      
       // Log some messages to demonstrate different log levels
       ldClient.on('ready', () => {
-        logger.debug('This debug message will only appear if the sdk-log-level flag is set to "debug"');
-        logger.info('This info message will appear if the sdk-log-level flag is set to "debug" or "info"');
-        logger.warn('This warning message will appear if the sdk-log-level flag is set to "debug", "info", or "warn"');
+        logger.debug(`This debug message will only appear if the ${flagKey} flag is set to "debug"`);
+        logger.info(`This info message will appear if the ${flagKey} flag is set to "debug" or "info"`);
+        logger.warn(`This warning message will appear if the ${flagKey} flag is set to "debug", "info", or "warn"`);
         logger.error('This error message will always appear');
         
         // Set up periodic logging to demonstrate the logger
@@ -39,9 +45,12 @@ const LoggerUpdater: React.FC = () => {
       
       // Set up a listener for flag changes
       const handleFlagChange = (changes: Record<string, { current: unknown; previous: unknown }>) => {
-        // If the sdk-log-level flag changes, re-identify with the current context
+        // Get the flag key from props
+        const flagKey = logLevelFlagKey;
+        
+        // If the custom log level flag changes, re-identify with the current context
         // to ensure we're using the correct context for evaluation
-        const logLevelChange = changes['sdk-log-level'] || changes['sdkLogLevel'];
+        const logLevelChange = changes[flagKey];
         
         if (logLevelChange) {
           // Get the new log level
@@ -138,7 +147,9 @@ const FlagDisplay: React.FC = () => {
 /**
  * Component that allows changing the user context
  */
-const ContextSwitcher: React.FC = () => {
+const ContextSwitcher: React.FC<{
+  logger: ReturnType<typeof createFlagBasedLogger>;
+}> = ({ logger }) => {
   const ldClient = useLDClient();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -213,11 +224,12 @@ const ContextSwitcher: React.FC = () => {
  * Setup form to enter client ID and initial context
  */
 const SetupForm: React.FC<{
-  onSetup: (clientId: string, initialContext: LDContext) => void;
+  onSetup: (clientId: string, initialContext: LDContext, logLevelFlagKey: string) => void;
 }> = ({ onSetup }) => {
   const [clientId, setClientId] = useState('');
   const [userKey, setUserKey] = useState('anonymous-user');
   const [isAnonymous, setIsAnonymous] = useState(true);
+  const [logLevelFlagKey, setLogLevelFlagKey] = useState('custom-log-level');
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -233,7 +245,7 @@ const SetupForm: React.FC<{
       anonymous: isAnonymous
     };
     
-    onSetup(clientId, initialContext);
+    onSetup(clientId, initialContext, logLevelFlagKey);
   };
   
   return (
@@ -277,6 +289,20 @@ const SetupForm: React.FC<{
             Anonymous User
           </label>
         </div>
+        <div>
+          <label>
+            Log Level Flag Key:
+            <input 
+              type="text" 
+              value={logLevelFlagKey} 
+              onChange={(e) => setLogLevelFlagKey(e.target.value)} 
+              placeholder="Flag key for controlling log level"
+            />
+          </label>
+          <p className="help-text">
+            This is the feature flag key that will control the SDK's log level. Default is 'sdk-log-level'.
+          </p>
+        </div>
         <button type="submit">Initialize SDK</button>
       </form>
     </div>
@@ -291,10 +317,11 @@ const LoggerExample: React.FC = () => {
   const [config, setConfig] = useState<{
     clientId: string;
     initialContext: LDContext;
+    logLevelFlagKey: string;
   } | null>(null);
   
-  const handleSetup = (clientId: string, initialContext: LDContext) => {
-    setConfig({ clientId, initialContext });
+  const handleSetup = (clientId: string, initialContext: LDContext, logLevelFlagKey: string) => {
+    setConfig({ clientId, initialContext, logLevelFlagKey });
   };
   
   // If config is not set, show the setup form
@@ -306,18 +333,46 @@ const LoggerExample: React.FC = () => {
     );
   }
   
+  // Create a logger with the user-provided flag key
+  const customLogger = createFlagBasedLogger({
+    logLevelFlagKey: config.logLevelFlagKey
+  });
+  
   // If config is set, initialize the SDK and show the main UI
   return (
     <LDProvider
       clientSideID={config.clientId}
       context={config.initialContext}
       options={{
-        logger: logger
+        logger: customLogger
       }}
     >
-      <LoggerUpdater />
+      <LoggerUpdater logger={customLogger} logLevelFlagKey={config.logLevelFlagKey} />
       <div className="app-container">
         <h1>LaunchDarkly Flag-Based Logger Example</h1>
+        
+        <style>
+          {`
+            .flag-key-highlight {
+              background-color: #f0f8ff;
+              border-left: 4px solid #0076ff;
+              padding: 15px;
+              margin: 20px 0;
+              border-radius: 4px;
+            }
+            
+            .code-snippet {
+              background-color: #f5f5f5;
+              padding: 15px;
+              border-radius: 4px;
+              font-family: 'Courier New', monospace;
+              font-size: 14px;
+              line-height: 1.5;
+              overflow-x: auto;
+              white-space: pre;
+            }
+          `}
+        </style>
         
         <div className="info-section">
           <h2>About This Example</h2>
@@ -328,8 +383,25 @@ const LoggerExample: React.FC = () => {
             <li>How to use a feature flag to control the SDK's log level</li>
             <li>How to build and update context information for flag evaluation</li>
           </ol>
+          <div className="flag-key-highlight">
+            <h3>Custom Flag Key Configuration</h3>
+            <p>
+              This example uses a <strong>custom flag key</strong> instead of the default:
+            </p>
+            <pre className="code-snippet">
+{`// Using a custom flag key
+const loggerOptions = {
+  logLevelFlagKey: '${config.logLevelFlagKey}'
+};
+const logger = createFlagBasedLogger(loggerOptions);
+
+// Default would be:
+// const logger = createFlagBasedLogger();  // Uses 'sdk-log-level' by default`}
+            </pre>
+          </div>
+          
           <p>
-            The log level is controlled by the <code>sdk-log-level</code> feature flag, which can be set to:
+            The log level is controlled by the <code>{config.logLevelFlagKey}</code> feature flag, which can be set to:
           </p>
           <ul>
             <li><code>debug</code> - Show all messages (debug, info, warn, error)</li>
@@ -341,7 +413,7 @@ const LoggerExample: React.FC = () => {
         </div>
         
         <div className="context-section">
-          <ContextSwitcher />
+          <ContextSwitcher logger={customLogger} />
         </div>
         
         <div className="display-section">

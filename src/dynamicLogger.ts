@@ -1,12 +1,27 @@
 import { LDClient, LDLogger } from 'launchdarkly-js-client-sdk';
 
 /**
+ * Configuration options for the flag-based logger.
+ */
+export interface FlagBasedLoggerOptions {
+  /**
+   * The feature flag key to check for the log level.
+   * Default is 'sdk-log-level'.
+   */
+  logLevelFlagKey?: string;
+}
+
+/**
  * Creates a logger that dynamically adjusts its behavior based on a feature flag value.
  * 
- * @param flagKey The feature flag key to check for the log level
+ * @param options Configuration options for the logger
  * @returns A logger that implements the LDLogger interface with an additional setClient method
  */
-export function createFlagBasedLogger(flagKey = 'sdk-log-level'): LDLogger & { setClient: (client: LDClient) => void } {
+export function createFlagBasedLogger(options?: string | FlagBasedLoggerOptions): LDLogger & { setClient: (client: LDClient) => void } {
+  // Handle the case where options is a string (for backward compatibility)
+  const flagKey = typeof options === 'string' 
+    ? options 
+    : options?.logLevelFlagKey || 'sdk-log-level';
   let ldClient: LDClient | null = null;
   let currentLogLevel = 'info'; // Default log level
   let isCheckingFlag = false; // Flag to prevent recursive logging
@@ -81,7 +96,7 @@ export function createFlagBasedLogger(flagKey = 'sdk-log-level'): LDLogger & { s
       message.includes('summary:') ||
       
       // Filter out any messages about the SDK log level flag itself
-      message.toLowerCase().includes('sdk-log-level') ||
+      message.toLowerCase().includes(flagKey.toLowerCase()) ||
       message.includes('sdkLogLevel')
     );
   };
